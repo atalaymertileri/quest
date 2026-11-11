@@ -11,37 +11,11 @@ Require Import Primitives Process ProcessGuarding Typechecking.
    this file lifts process/global-local machinery to session maps,
    then defines safety/liveness-oriented context notions. *)
 
-
-(* definition for error 
-Inductive errorM : session -> Prop := 
-  | v_err : forall e v P Q p M,
-            stepE e (e_val v) -> v <> (vbool false) -> v <> (vbool true) ->
-            M p = Some (p_ite e P Q) -> errorM M
-  | c_err : forall p q l xs e v M Q,
-            p <> q -> 
-            stepE e (e_val v) -> 
-            M p = Some (p_recv q xs) -> M q = Some (p_send p l e Q) ->
-            onth l xs = None -> 
-            errorM M.
-*)
-
 (* notation that forgets participants and labels when G takes a step, equivalent to saying that G -(p,q)l-> G' <-> G -> G' *)
 Inductive multiC : relation gtt := 
   | multiC_refl : forall G, multiC G G
   | multiC_step : forall G1 G2 G3 p q n, gttstepC G1 G2 p q n -> multiC G2 G3 -> multiC G1 G3.
 
-(* definition that ensures the domain of functions are finite, used in typability constraints at the top layer where we need to ensure finiteness (more for decidability reasons) 
-Definition finiteF {A} (f : participant -> option A) := exists Mpt, NoDup Mpt /\ forall pt, (In pt Mpt <-> InS pt f).
-*)
-
-(* weak session typing \vdash^T 
-Inductive typ_sess `{good_merge} : session -> gtt -> Prop :=
-  | tw_sess : 
-    forall M G, balancedG G -> regGtt G ->
-    (forall pt, isgPartsC pt G -> In pt M.(elems _ _)) ->
-    (forall pt P, M pt = Some P -> cguardedP P /\ exists T, projC G pt T /\ typ_proc nil nil P T) ->
-    typ_sess M G.
-*)
 
 (* M \Rrightarrow \prod_{i \in I} p : 0 *)
 Definition is_inact (M: session) := (exists M', unfoldM M M' /\ (forall pt, M' pt = None \/ (exists lz, M' pt = Some (p_end lz)))). 
