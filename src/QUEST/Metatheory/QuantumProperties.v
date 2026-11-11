@@ -1313,18 +1313,18 @@ Qed.
 Local Open Scope R_scope.
 Local Open Scope C_scope.
 
-Definition free_qubit_sufficiency_basis0 (i : nat) (r : bool) : nat -> bool :=
+Definition qubit_register_minimality_basis0 (i : nat) (r : bool) : nat -> bool :=
   fun k => if Nat.eqb k i then r else false.
 
-Definition free_qubit_sufficiency_basis1 (i : nat) (r : bool) : nat -> bool :=
+Definition qubit_register_minimality_basis1 (i : nat) (r : bool) : nat -> bool :=
   fun k => if Nat.eqb k i then negb r else false.
 
-Definition free_qubit_sufficiency_measurement_vector (n i : nat) (r : bool) (prob : R)
+Definition qubit_register_minimality_measurement_vector (n i : nat) (r : bool) (prob : R)
     : state_vector n :=
-  (RtoC (sqrt prob)) .* f_to_vec n (free_qubit_sufficiency_basis0 i r) .+
-  (RtoC (sqrt (1 - prob))) .* f_to_vec n (free_qubit_sufficiency_basis1 i r).
+  (RtoC (sqrt prob)) .* f_to_vec n (qubit_register_minimality_basis0 i r) .+
+  (RtoC (sqrt (1 - prob))) .* f_to_vec n (qubit_register_minimality_basis1 i r).
 
-Lemma free_qubit_sufficiency_fvec_norm_one : forall n f,
+Lemma qubit_register_minimality_fvec_norm_one : forall n f,
   norm (f_to_vec n f) = 1%R.
 Proof.
   intros n f.
@@ -1342,7 +1342,7 @@ Proof.
   nra.
 Qed.
 
-Lemma free_qubit_sufficiency_fvec_inner_self : forall n f,
+Lemma qubit_register_minimality_fvec_inner_self : forall n f,
   ⟨f_to_vec n f, f_to_vec n f⟩ = Complex.C1.
 Proof.
   intros n f.
@@ -1352,7 +1352,7 @@ Proof.
   unfold I; simpl; reflexivity.
 Qed.
 
-Lemma free_qubit_sufficiency_fvec_inner_diff : forall n f g,
+Lemma qubit_register_minimality_fvec_inner_diff : forall n f g,
   funbool_to_nat n f <> funbool_to_nat n g ->
   ⟨f_to_vec n f, f_to_vec n g⟩ = Complex.C0.
 Proof.
@@ -1366,151 +1366,151 @@ Proof.
   - exact Hneq.
 Qed.
 
-Lemma free_qubit_sufficiency_basis_vectors_orthogonal01 : forall n i r,
+Lemma qubit_register_minimality_basis_vectors_orthogonal01 : forall n i r,
   (i < n)%nat ->
-  ⟨f_to_vec n (free_qubit_sufficiency_basis0 i r),
-   f_to_vec n (free_qubit_sufficiency_basis1 i r)⟩ = Complex.C0.
+  ⟨f_to_vec n (qubit_register_minimality_basis0 i r),
+   f_to_vec n (qubit_register_minimality_basis1 i r)⟩ = Complex.C0.
 Proof.
   intros n i r Hi.
-  apply free_qubit_sufficiency_fvec_inner_diff.
+  apply qubit_register_minimality_fvec_inner_diff.
   intro Heq.
   pose proof
     (proj2 (funbool_to_nat_eq_iff n
-      (free_qubit_sufficiency_basis0 i r) (free_qubit_sufficiency_basis1 i r)) Heq i Hi)
+      (qubit_register_minimality_basis0 i r) (qubit_register_minimality_basis1 i r)) Heq i Hi)
     as Hbits.
-  unfold free_qubit_sufficiency_basis0, free_qubit_sufficiency_basis1 in Hbits.
+  unfold qubit_register_minimality_basis0, qubit_register_minimality_basis1 in Hbits.
   rewrite Nat.eqb_refl in Hbits.
   destruct r; discriminate.
 Qed.
 
-Lemma free_qubit_sufficiency_basis_vectors_orthogonal10 : forall n i r,
+Lemma qubit_register_minimality_basis_vectors_orthogonal10 : forall n i r,
   (i < n)%nat ->
-  ⟨f_to_vec n (free_qubit_sufficiency_basis1 i r),
-   f_to_vec n (free_qubit_sufficiency_basis0 i r)⟩ = Complex.C0.
+  ⟨f_to_vec n (qubit_register_minimality_basis1 i r),
+   f_to_vec n (qubit_register_minimality_basis0 i r)⟩ = Complex.C0.
 Proof.
   intros n i r Hi.
-  apply free_qubit_sufficiency_fvec_inner_diff.
+  apply qubit_register_minimality_fvec_inner_diff.
   intro Heq.
   pose proof
     (proj2 (funbool_to_nat_eq_iff n
-      (free_qubit_sufficiency_basis1 i r) (free_qubit_sufficiency_basis0 i r)) Heq i Hi)
+      (qubit_register_minimality_basis1 i r) (qubit_register_minimality_basis0 i r)) Heq i Hi)
     as Hbits.
-  unfold free_qubit_sufficiency_basis0, free_qubit_sufficiency_basis1 in Hbits.
+  unfold qubit_register_minimality_basis0, qubit_register_minimality_basis1 in Hbits.
   rewrite Nat.eqb_refl in Hbits.
   destruct r; discriminate.
 Qed.
 
-Lemma free_qubit_sufficiency_measurement_vector_norm : forall n i r prob,
+Lemma qubit_register_minimality_measurement_vector_norm : forall n i r prob,
   (i < n)%nat -> 0%R <= prob <= 1%R ->
-  @norm (2^n) (free_qubit_sufficiency_measurement_vector n i r prob) = 1%R.
+  @norm (2^n) (qubit_register_minimality_measurement_vector n i r prob) = 1%R.
 Proof.
   intros n i r prob Hi [Hprob0 Hprob1].
   assert (Hsq :
-    (@norm (2^n) (free_qubit_sufficiency_measurement_vector n i r prob)^2)%R = 1%R).
+    (@norm (2^n) (qubit_register_minimality_measurement_vector n i r prob)^2)%R = 1%R).
   {
-    unfold free_qubit_sufficiency_measurement_vector.
+    unfold qubit_register_minimality_measurement_vector.
     rewrite norm_squared.
     repeat rewrite inner_product_plus_l.
     repeat rewrite inner_product_plus_r.
     rewrite !inner_product_scale_l, !inner_product_scale_r.
     rewrite 2!Cconj_R.
-    rewrite free_qubit_sufficiency_fvec_inner_self, free_qubit_sufficiency_fvec_inner_self.
-    rewrite free_qubit_sufficiency_basis_vectors_orthogonal01,
-      free_qubit_sufficiency_basis_vectors_orthogonal10 by exact Hi.
+    rewrite qubit_register_minimality_fvec_inner_self, qubit_register_minimality_fvec_inner_self.
+    rewrite qubit_register_minimality_basis_vectors_orthogonal01,
+      qubit_register_minimality_basis_vectors_orthogonal10 by exact Hi.
     simpl; ring_simplify.
     rewrite pow2_sqrt by lra.
     rewrite pow2_sqrt by lra.
     lra.
   }
   pose proof (@norm_ge_0 (2^n)
-    (free_qubit_sufficiency_measurement_vector n i r prob))
+    (qubit_register_minimality_measurement_vector n i r prob))
     as Hnonneg.
   nra.
 Qed.
 
-Lemma free_qubit_sufficiency_measurement_vector_project : forall n i r prob,
+Lemma qubit_register_minimality_measurement_vector_project : forall n i r prob,
   (i < n)%nat ->
-  proj i n r × free_qubit_sufficiency_measurement_vector n i r prob =
-    (RtoC (sqrt prob)) .* f_to_vec n (free_qubit_sufficiency_basis0 i r).
+  proj i n r × qubit_register_minimality_measurement_vector n i r prob =
+    (RtoC (sqrt prob)) .* f_to_vec n (qubit_register_minimality_basis0 i r).
 Proof.
   intros n i r prob Hi.
-  unfold free_qubit_sufficiency_measurement_vector.
+  unfold qubit_register_minimality_measurement_vector.
   rewrite Mmult_plus_distr_l.
   rewrite !Mscale_mult_dist_r.
   rewrite f_to_vec_proj_eq by
-    (try exact Hi; unfold free_qubit_sufficiency_basis0; now rewrite Nat.eqb_refl).
+    (try exact Hi; unfold qubit_register_minimality_basis0; now rewrite Nat.eqb_refl).
   rewrite f_to_vec_proj_neq by
-    (try exact Hi; unfold free_qubit_sufficiency_basis1;
+    (try exact Hi; unfold qubit_register_minimality_basis1;
      rewrite Nat.eqb_refl; destruct r; discriminate).
   rewrite Mscale_0_r, Mplus_0_r.
   reflexivity.
 Qed.
 
-Lemma free_qubit_sufficiency_measurement_vector_project_norm : forall n i r prob,
+Lemma qubit_register_minimality_measurement_vector_project_norm : forall n i r prob,
   (i < n)%nat ->
-  norm (proj i n r × free_qubit_sufficiency_measurement_vector n i r prob) =
+  norm (proj i n r × qubit_register_minimality_measurement_vector n i r prob) =
     sqrt prob.
 Proof.
   intros n i r prob Hi.
-  rewrite free_qubit_sufficiency_measurement_vector_project by exact Hi.
-  rewrite norm_scale, free_qubit_sufficiency_fvec_norm_one, Cmod_R, Rabs_pos_eq.
+  rewrite qubit_register_minimality_measurement_vector_project by exact Hi.
+  rewrite norm_scale, qubit_register_minimality_fvec_norm_one, Cmod_R, Rabs_pos_eq.
   - simpl; rewrite Rmult_1_r; reflexivity.
   - apply sqrt_pos.
 Qed.
 
-Lemma free_qubit_sufficiency_measurement_vector_project_other : forall n i j r prob,
+Lemma qubit_register_minimality_measurement_vector_project_other : forall n i j r prob,
   (i < n)%nat -> (j < n)%nat -> i <> j ->
   @Mmult (2^n) (2^n) 1 (proj j n false)
-    (free_qubit_sufficiency_measurement_vector n i r prob) =
-    free_qubit_sufficiency_measurement_vector n i r prob.
+    (qubit_register_minimality_measurement_vector n i r prob) =
+    qubit_register_minimality_measurement_vector n i r prob.
 Proof.
   intros n i j r prob Hi Hj Hneq.
-  unfold free_qubit_sufficiency_measurement_vector.
+  unfold qubit_register_minimality_measurement_vector.
   rewrite Mmult_plus_distr_l.
   rewrite !Mscale_mult_dist_r.
   rewrite f_to_vec_proj_eq.
   2: exact Hj.
   2: {
-    unfold free_qubit_sufficiency_basis0.
+    unfold qubit_register_minimality_basis0.
     assert (Nat.eqb j i = false) by (apply Nat.eqb_neq; congruence).
     now rewrite H.
   }
   rewrite f_to_vec_proj_eq.
   2: exact Hj.
   2: {
-    unfold free_qubit_sufficiency_basis1.
+    unfold qubit_register_minimality_basis1.
     assert (Nat.eqb j i = false) by (apply Nat.eqb_neq; congruence).
     now rewrite H.
   }
   reflexivity.
 Qed.
 
-Lemma free_qubit_sufficiency_measurement_vector_wf : forall n i r prob,
+Lemma qubit_register_minimality_measurement_vector_wf : forall n i r prob,
   (i < n)%nat -> 0%R < prob <= 1%R ->
-  state_vector_wf (free_qubit_sufficiency_measurement_vector n i r prob).
+  state_vector_wf (qubit_register_minimality_measurement_vector n i r prob).
 Proof.
   intros n i r prob Hi [Hprob0 Hprob1].
   unfold state_vector_wf.
   split.
-  - unfold free_qubit_sufficiency_measurement_vector.
+  - unfold qubit_register_minimality_measurement_vector.
     apply WF_plus; apply WF_scale; apply f_to_vec_WF.
   - split.
     + left; lia.
     + intros j Hj.
       destruct (Nat.eq_dec j i) as [->|Hneq].
       * exists r; split.
-        -- rewrite free_qubit_sufficiency_measurement_vector_project_norm by exact Hi.
+        -- rewrite qubit_register_minimality_measurement_vector_project_norm by exact Hi.
            apply Rgt_not_eq; apply sqrt_lt_R0; exact Hprob0.
-        -- apply free_qubit_sufficiency_measurement_vector_norm; [exact Hi|lra].
+        -- apply qubit_register_minimality_measurement_vector_norm; [exact Hi|lra].
       * exists false; split.
-        -- rewrite (free_qubit_sufficiency_measurement_vector_project_other
+        -- rewrite (qubit_register_minimality_measurement_vector_project_other
              n i j r prob Hi Hj ltac:(congruence)).
-           rewrite free_qubit_sufficiency_measurement_vector_norm by (try exact Hi; lra).
+           rewrite qubit_register_minimality_measurement_vector_norm by (try exact Hi; lra).
            lra.
-        -- apply free_qubit_sufficiency_measurement_vector_norm; [exact Hi|lra].
+        -- apply qubit_register_minimality_measurement_vector_norm; [exact Hi|lra].
 Qed.
 
-Lemma free_qubit_sufficiency_project_probability_le_one : forall n i r (sv : state_vector n),
+Lemma qubit_register_minimality_project_probability_le_one : forall n i r (sv : state_vector n),
   state_vector_wf sv -> (i < n)%nat ->
   (norm (proj i n r × sv)^2)%R <= 1%R.
 Proof.
@@ -1545,7 +1545,7 @@ Proof.
   nra.
 Qed.
 
-Lemma free_qubit_sufficiency_qmap_key_iff : forall
+Lemma qubit_register_minimality_qmap_key_iff : forall
     (qm : finite_map qubit_reference (participant * fin)) q,
   qm q <> None <-> In q (map fst (elems qubit_reference (participant * fin) qm)).
 Proof.
@@ -1565,7 +1565,7 @@ Proof.
     rewrite Hlookup; discriminate.
 Qed.
 
-Lemma free_qubit_sufficiency_context_key_iff : forall (context : qubit_context) q,
+Lemma qubit_register_minimality_context_key_iff : forall (context : qubit_context) q,
   context q = Some tt <->
   In q (map fst (elems qubit_reference unit context)).
 Proof.
@@ -1581,7 +1581,7 @@ Proof.
     apply (proj1 (proj2 (specs qubit_reference unit context) q tt) Hin).
 Qed.
 
-Lemma free_qubit_sufficiency_zero_state_on_context : forall
+Lemma qubit_register_minimality_zero_state_on_context : forall
     (p : participant) (context : qubit_context),
   exists qstate,
     state_only_contains_qubits_in_context context qstate /\
@@ -1596,20 +1596,20 @@ Proof.
   exists (proj1_sig zstate); split.
   - unfold state_only_contains_qubits_in_context.
     intro q.
-    rewrite free_qubit_sufficiency_context_key_iff.
+    rewrite qubit_register_minimality_context_key_iff.
     change (In q keys <-> quantum_map_of (proj1_sig zstate) q <> None).
-    rewrite free_qubit_sufficiency_qmap_key_iff.
+    rewrite qubit_register_minimality_qmap_key_iff.
     rewrite (proj2_sig zstate).
     rewrite in_rev.
     tauto.
   - intros q Hcontext.
-    apply free_qubit_sufficiency_context_key_iff in Hcontext.
+    apply qubit_register_minimality_context_key_iff in Hcontext.
     unfold keys in Hcontext.
     unfold zstate.
     eapply zero_state_for_qubits_owner_lookup; eauto.
 Qed.
 
-Lemma free_qubit_sufficiency_process_owned_by_context `{good_merge} : forall
+Lemma qubit_register_minimality_process_owned_by_context `{good_merge} : forall
     (M : session) delta G context p P,
   typecheck_session context M delta G ->
   M p = Some P ->
@@ -1619,7 +1619,7 @@ Lemma free_qubit_sufficiency_process_owned_by_context `{good_merge} : forall
       exists n, quantum_map_of qstate q = Some (p, n).
 Proof.
   intros M delta G context p P Htyped Hlookup.
-  destruct (free_qubit_sufficiency_zero_state_on_context p context)
+  destruct (qubit_register_minimality_zero_state_on_context p context)
     as [qstate [Hstate Howners]].
   exists qstate; split; [exact Hstate|].
   intros q Hin.
@@ -1826,7 +1826,7 @@ Proof.
   apply qubit_variable_substitution_expression_support.
 Qed.
 
-Lemma smap_compose_free_qubit_sufficiency : forall A B C (f : B -> C) (g : A -> B)
+Lemma smap_compose_qubit_register_minimality : forall A B C (f : B -> C) (g : A -> B)
     (ll : slist A),
   smap f (smap g ll) = smap (fun x => f (g x)) ll.
 Proof.
@@ -1864,7 +1864,7 @@ Proof.
     rewrite Nat.ltb_irrefl, Nat.eqb_refl.
     simpl; left; reflexivity.
   - apply in_app_iff; right; exact (IHHocc d).
-  - rewrite smap_compose_free_qubit_sufficiency.
+  - rewrite smap_compose_qubit_register_minimality.
     eapply in_fold_smap_from_branch with
       (f := subst_expression_in_process (S x) (S d) (Val (QVal q)))
       (g := free_qubits); eauto.
@@ -2439,7 +2439,7 @@ Proof.
     exfalso; eapply qsafe_eval_op_never_qubit; exact Heval.
 Qed.
 
-Theorem free_qubit_sufficiency `{good_merge}:
+Theorem qubit_register_minimality `{good_merge}:
 forall M M' qstate qstate' a pi delta G context delta' G' context',
 typecheck_session context M delta G ->
 step (qstate, M) a (qstate', M') pi ->
@@ -2456,7 +2456,7 @@ Proof.
   clear Hclosed.
   revert delta G context delta' G' Htyped Htyped' Hguard.
   dependent induction Hstep; intros; cleanup; try congruence.
-  - destruct (free_qubit_sufficiency_zero_state_on_context p context)
+  - destruct (qubit_register_minimality_zero_state_on_context p context)
       as [qstate_min [Hsafe _]].
     assert (Hreplay : step (qstate_min, M) (Transmit p q l0 v)
       (qstate_min, insert (insert M q
@@ -2483,7 +2483,7 @@ Proof.
       as Hsupport.
     assert (Hqcontext : context v = Some tt).
     { apply (proj1 Hsupport); exact Hqsession. }
-    destruct (free_qubit_sufficiency_zero_state_on_context p context)
+    destruct (qubit_register_minimality_zero_state_on_context p context)
       as [qstate_min [Hsafe Howners]].
     destruct (Howners v Hqcontext) as [nmin Hlookup_min].
     set (qstate_min' := transfer_qubit_from_lookup
@@ -2622,13 +2622,13 @@ Proof.
         + apply Permutation_sym; exact HdeletePerm.
         + exact Hother.
     }
-    destruct (free_qubit_sufficiency_zero_state_on_context p context)
+    destruct (qubit_register_minimality_zero_state_on_context p context)
       as [qstate_min [Hsafe _]].
     assert (HfreshMin : ~ In q
       (map fst (elems qubit_reference (participant * fin)
         (proj1_sig (projT1 qstate_min)))))
       by (intro Hin; apply HnotContext; apply (proj2 (Hsafe q));
-          apply (proj2 (free_qubit_sufficiency_qmap_key_iff
+          apply (proj2 (qubit_register_minimality_qmap_key_iff
             (proj1_sig (projT1 qstate_min)) q)); exact Hin).
     set (qstate_min' := add_new_qubit qstate_min p q HfreshMin).
     assert (Hreplay : step (qstate_min, M) (Tau p)
@@ -2646,7 +2646,7 @@ Proof.
     + exact Htyped.
     + exact Hsafe.
     + exact Htyped'.
-  - destruct (free_qubit_sufficiency_zero_state_on_context p context)
+  - destruct (qubit_register_minimality_zero_state_on_context p context)
       as [qstate_min [Hsafe _]].
     assert (Hreplay : step (qstate_min, M) (Tau p)
       (qstate_min, insert M p P0) 1).
@@ -2659,7 +2659,7 @@ Proof.
     + exact Htyped.
     + exact Hsafe.
     + exact Htyped'.
-  - destruct (free_qubit_sufficiency_zero_state_on_context p context)
+  - destruct (qubit_register_minimality_zero_state_on_context p context)
       as [qstate_min [Hsafe _]].
     assert (Hreplay : step (qstate_min, M) (Tau p)
       (qstate_min, insert M p P1) 1).
@@ -2683,7 +2683,7 @@ Proof.
       as HsessionSupport.
     assert (Hqcontext : context q = Some tt).
     { apply (proj1 HsessionSupport); exact Hqsession. }
-    destruct (free_qubit_sufficiency_zero_state_on_context p context)
+    destruct (qubit_register_minimality_zero_state_on_context p context)
       as [qstate_base [HbaseSafe HbaseOwners]].
     destruct (HbaseOwners q Hqcontext) as [nbase HlookupBase].
     set (qmBase := proj1_sig (projT1 qstate_base)).
@@ -2720,15 +2720,15 @@ Proof.
     assert (HprobLe : (prob <= 1)%R).
     {
       unfold prob.
-      eapply free_qubit_sufficiency_project_probability_le_one.
+      eapply qubit_register_minimality_project_probability_le_one.
       - exact HsvOrig.
       - exact HidxOrig.
     }
-    set (svMin := free_qubit_sufficiency_measurement_vector Nbase nbase r prob).
+    set (svMin := qubit_register_minimality_measurement_vector Nbase nbase r prob).
     assert (HsvMin : state_vector_wf svMin).
     {
       unfold svMin.
-      apply free_qubit_sufficiency_measurement_vector_wf.
+      apply qubit_register_minimality_measurement_vector_wf.
       - exact HidxBase.
       - split; assumption.
     }
@@ -2749,7 +2749,7 @@ Proof.
     assert (HnonzeroMin : norm (proj nbase Nbase r × svMin) <> 0%R).
     {
       unfold svMin.
-      rewrite (free_qubit_sufficiency_measurement_vector_project_norm
+      rewrite (qubit_register_minimality_measurement_vector_project_norm
         Nbase nbase r prob HidxBase).
       apply Rgt_not_eq.
       apply sqrt_lt_R0; exact HprobPos.
@@ -2766,7 +2766,7 @@ Proof.
       unfold piMin.
       rewrite !measurement_probability_from_nonzero_value.
       unfold svMin.
-      rewrite (free_qubit_sufficiency_measurement_vector_project_norm
+      rewrite (qubit_register_minimality_measurement_vector_project_norm
         Nbase nbase r prob HidxBase).
       rewrite pow2_sqrt by lra.
       unfold prob, Norig, svOrig; reflexivity.
@@ -2785,14 +2785,14 @@ Proof.
       eapply Meas with (p := p) (q := q) (P := P) (s1 := M)
         (q_state1 :=
           existT _ (projT1 qstate_base)
-            (exist _ (free_qubit_sufficiency_measurement_vector Nbase nbase r prob) HsvMin))
+            (exist _ (qubit_register_minimality_measurement_vector Nbase nbase r prob) HsvMin))
         (q_state2 := snd (measure_qubit_from_nonzero
           qmBase (proj2_sig (projT1 qstate_base))
-          (free_qubit_sufficiency_measurement_vector Nbase nbase r prob) HsvMin
+          (qubit_register_minimality_measurement_vector Nbase nbase r prob) HsvMin
           q p nbase r HlookupMin HlenBase HnonzeroMin))
         (n := nbase) (r := r) (pi :=
           measurement_probability_from_nonzero Nbase
-            (free_qubit_sufficiency_measurement_vector Nbase nbase r prob)
+            (qubit_register_minimality_measurement_vector Nbase nbase r prob)
             nbase r HnonzeroMin)
         (Hlookup := HlookupMin) (Hlen := HlenBase)
         (Hnonzero := HnonzeroMin).
@@ -2809,7 +2809,7 @@ Proof.
     + exact Htyped'.
   - set (Punit := p_unitary (length lq) U
       (map (fun z => Val (QVal z)) lq) P).
-    destruct (free_qubit_sufficiency_process_owned_by_context
+    destruct (qubit_register_minimality_process_owned_by_context
       M delta G context p Punit Htyped H)
       as [qstate_min [Hsafe Howned]].
     assert (HlookupList : forall q0, In q0 lq ->
