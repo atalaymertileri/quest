@@ -1,4 +1,3 @@
-From Hammer Require Import Hammer Tactics.
 From SQIR Require Import SQIR UnitaryOps.
 From QuantumLib Require Import Matrix CauchySchwarz.
 Require Import Lia Permutation Reals List.

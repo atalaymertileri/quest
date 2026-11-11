@@ -1221,7 +1221,8 @@ Lemma progress_internal_transition_on_state : forall
   exists qstate' M' pi P',
     step (qstate, M) (Tau p) (qstate', M') pi /\
     M' p = Some P' /\
-    internal_prefix_height P' < internal_prefix_height P.
+    internal_prefix_height P' < internal_prefix_height P /\
+    (forall r, r <> p -> M' r = M r).
 Proof.
   intros M p P h T qstate Hlookup Hguard Hclosed Hhead Hview Hroot
     Hinternal Havailable.
@@ -1236,8 +1237,13 @@ Proof.
   - eapply step_after_unfold_one; eauto.
   - split.
     + rewrite insert_eq; reflexivity.
-    + pose proof (internal_prefix_height_unravel_le P Hguard).
-      lia.
+    + split.
+      * pose proof (internal_prefix_height_unravel_le P Hguard).
+        lia.
+      * intros r Hrp.
+        rewrite insert_neq by (intro Heq; apply Hrp; symmetry; exact Heq).
+        rewrite insert_neq by (intro Heq; apply Hrp; symmetry; exact Heq).
+        reflexivity.
 Qed.
 
 Definition process_qubits_owned_by (M : session) (qstate : quantum_state)
@@ -2599,6 +2605,26 @@ Proof.
   exists xs, ys; split; assumption.
 Qed.
 
+Lemma unravelP_send : forall p l e P,
+  unravelP (p_send p l e P) = p_send p l e P.
+Proof.
+  intros p l e P.
+  unfold unravelP.
+  generalize (mu_heightP (p_send p l e P)).
+  induction n; simpl; [reflexivity|].
+  rewrite IHn. reflexivity.
+Qed.
+
+Lemma unravelP_recv : forall p xs,
+  unravelP (p_recv p xs) = p_recv p xs.
+Proof.
+  intros p xs.
+  unfold unravelP.
+  generalize (mu_heightP (p_recv p xs)).
+  induction n; simpl; [reflexivity|].
+  rewrite IHn. reflexivity.
+Qed.
+
 Lemma session_fidelity_iteration_local `{good_merge} : forall
     (n : nat) (M : session) (delta : typ_ctx) (G : gtt)
     (p q : participant) (qcontext : qubit_context)
@@ -2606,7 +2632,9 @@ Lemma session_fidelity_iteration_local `{good_merge} : forall
   p <> q ->
   internal_prefix_height P + internal_prefix_height Q = n ->
   M p = Some P -> M q = Some Q ->
-  (exists l B delta2, ctx_step_f delta p q l B delta2) ->
+  (exists fs fr,
+    delta p = Some (ltt_send q fs) /\
+    delta q = Some (ltt_recv p fr)) ->
   typecheck_session qcontext M delta G ->
   cguarded_session M ->
   state_only_contains_qubits_in_context qcontext qstate ->
@@ -2616,13 +2644,18 @@ Lemma session_fidelity_iteration_local `{good_merge} : forall
     ctx_step_f delta p q l2 S2 delta2 /\
     gttstepC G G2 p q l2 /\
     multistep (qstate, M) la (qstate2, M2) pi /\
-    typecheck_session qcontext2 M2 delta2 G2.
+    typecheck_session qcontext2 M2 delta2 G2 /\
+    (forall r, r <> p -> r <> q -> M2 r = M r) /\
+    (forall l e P', P = p_send q l e P' -> M2 p = Some P') /\
+    (forall cont, Q = p_recv p cont ->
+      exists l Qbranch v,
+        onth l cont = Some Qbranch /\
+        M2 q = Some
+          (subst_expression_in_process 0 0 (Val v) Qbranch)).
 Proof.
   induction n using lt_wf_ind.
   intros M delta G p q qcontext qstate P Q Hneq Hrank HP HQ
-    [lctx [Bctx [delta0 Hctx]]] Htyped Hguard Hstate HagreeP HagreeQ.
-  destruct (ctx_step_f_endpoints delta delta0 p q lctx Bctx Hctx)
-    as [Hneq_ctx [fs [fr [Hsend Hrecv]]]].
+    [fs [fr [Hsend Hrecv]]] Htyped Hguard Hstate HagreeP HagreeQ.
   assert (Hclosed : variable_closed_session M).
   { eapply typecheck_session_closed; exact Htyped. }
   destruct (typecheck_session_component_at_delta qcontext M delta G p P
@@ -2652,6 +2685,17 @@ Proof.
     as [hQ [HheadQ [HviewQ [HrootQ HclassQ]]]].
   destruct HclassP as [HinternalP|HsendP].
   -
+    assert (Hno_direct_send : forall l0 e0 P0,
+        P = p_send q l0 e0 P0 -> False).
+    {
+      intros l0 e0 P0 Hshape.
+      subst P.
+      rewrite unravelP_send in HrootP.
+      simpl in HrootP.
+      inversion HrootP; subst hP.
+      simpl in HinternalP.
+      exact HinternalP.
+    }
     assert (HavailableP : forall qubit,
         process_head_uses_qubit hP qubit ->
         exists n0, quantum_map_of qstate qubit = Some (p, n0)).
@@ -2665,7 +2709,7 @@ Proof.
     destruct (progress_internal_transition_on_state M p P hP
       (ltt_send q fs) qstate HP HguardP HclosedP HheadP HviewP HrootP
       HinternalP HavailableP)
-      as [qstate1 [M1 [pi1 [Pafter [Hstep1 [HPafter Hdrop]]]]]].
+      as [qstate1 [M1 [pi1 [Pafter [Hstep1 [HPafter [Hdrop Hframe1]]]]]]].
     destruct (subject_reduction_via_association_1  M M1 pi1 qstate qstate1
       delta p qcontext G Hstep1 Htyped Hstate)
       as [qcontext1 [Htyped1 Hstate1]].
@@ -2692,17 +2736,46 @@ Proof.
       unfold n1; rewrite <- Hrank; simpl; lia.
     }
     destruct (H n1 Hlt M1 delta G p q qcontext1 qstate1 P1 Q1
-      Hneq Hrank1 HP1 HQ1 (ex_intro _ lctx (ex_intro _ Bctx
-        (ex_intro _ delta0 Hctx))) Htyped1 Hguard1 Hstate1 HagreeP1
+      Hneq Hrank1 HP1 HQ1 (ex_intro _ fs (ex_intro _ fr
+        (conj Hsend Hrecv))) Htyped1 Hguard1 Hstate1 HagreeP1
       HagreeQ1)
       as [delta2 [G2 [l2 [S2 [qstate2 [M2 [pi2 [la [qcontext2
-        [Hctx2 [Hgstep2 [Hmulti2 Htyped2]]]]]]]]]]]].
+        [Hctx2 [Hgstep2 [Hmulti2 [Htyped2
+          [Hframe2 [Hdone2 HrecvDone2]]]]]]]]]]]]]]].
     exists delta2, G2, l2, S2, qstate2, M2, (pi1 * pi2)%R,
       (Tau p :: la), qcontext2.
     split; [exact Hctx2|]. split; [exact Hgstep2|].
-    split; [eapply ms_step; [exact Hstep1|exact Hmulti2]|exact Htyped2].
+    split; [eapply ms_step; [exact Hstep1|exact Hmulti2]|].
+    split; [exact Htyped2|].
+    split.
+    + intros r Hrp Hrq.
+      rewrite (Hframe2 r Hrp Hrq).
+      apply Hframe1; exact Hrp.
+    + split.
+      * intros l0 e0 P0 Hshape.
+        exfalso; eapply Hno_direct_send; eauto.
+      * intros cont0 Hshape.
+        assert (Q1 = Q) as HQ1eq.
+        {
+          rewrite (Hframe1 q (fun Heq => Hneq (eq_sym Heq))) in HQ1.
+          rewrite HQ in HQ1.
+          inversion HQ1; reflexivity.
+        }
+        subst Q1.
+        eapply HrecvDone2; exact Hshape.
   - destruct HclassQ as [HinternalQ|HrecvQ].
     +
+      assert (Hno_direct_recv : forall cont0,
+          Q = p_recv p cont0 -> False).
+      {
+        intros cont0 Hshape.
+        subst Q.
+        rewrite unravelP_recv in HrootQ.
+        simpl in HrootQ.
+        inversion HrootQ; subst hQ.
+        simpl in HinternalQ.
+        exact HinternalQ.
+      }
       assert (HavailableQ : forall qubit,
           process_head_uses_qubit hQ qubit ->
           exists n0, quantum_map_of qstate qubit = Some (q, n0)).
@@ -2716,7 +2789,7 @@ Proof.
       destruct (progress_internal_transition_on_state M q Q hQ
         (ltt_recv p fr) qstate HQ HguardQ HclosedQ HheadQ HviewQ HrootQ
         HinternalQ HavailableQ)
-        as [qstate1 [M1 [pi1 [Qafter [Hstep1 [HQafter Hdrop]]]]]].
+        as [qstate1 [M1 [pi1 [Qafter [Hstep1 [HQafter [Hdrop Hframe1]]]]]]].
       destruct (subject_reduction_via_association_1 M M1 pi1 qstate qstate1
         delta q qcontext G Hstep1 Htyped Hstate)
         as [qcontext1 [Htyped1 Hstate1]].
@@ -2746,15 +2819,33 @@ Proof.
         unfold n1; rewrite <- Hrank; simpl; lia.
       }
       destruct (H n1 Hlt M1 delta G p q qcontext1 qstate1 P1 Q1
-        Hneq Hrank1 HP1 HQ1 (ex_intro _ lctx (ex_intro _ Bctx
-          (ex_intro _ delta0 Hctx))) Htyped1 Hguard1 Hstate1 HagreeP1
+        Hneq Hrank1 HP1 HQ1 (ex_intro _ fs (ex_intro _ fr
+          (conj Hsend Hrecv))) Htyped1 Hguard1 Hstate1 HagreeP1
         HagreeQ1)
         as [delta2 [G2 [l2 [S2 [qstate2 [M2 [pi2 [la [qcontext2
-          [Hctx2 [Hgstep2 [Hmulti2 Htyped2]]]]]]]]]]]].
+          [Hctx2 [Hgstep2 [Hmulti2 [Htyped2
+            [Hframe2 [Hdone2 HrecvDone2]]]]]]]]]]]]]]].
       exists delta2, G2, l2, S2, qstate2, M2, (pi1 * pi2)%R,
         (Tau q :: la), qcontext2.
       split; [exact Hctx2|]. split; [exact Hgstep2|].
-      split; [eapply ms_step; [exact Hstep1|exact Hmulti2]|exact Htyped2].
+      split; [eapply ms_step; [exact Hstep1|exact Hmulti2]|].
+      split; [exact Htyped2|].
+      split.
+      * intros r Hrp Hrq.
+        rewrite (Hframe2 r Hrp Hrq).
+        apply Hframe1; exact Hrq.
+      * split.
+      -- intros l0 e0 P0 Hshape.
+        assert (P1 = P) as HP1eq.
+        {
+          rewrite (Hframe1 p Hneq) in HP1.
+          rewrite HP in HP1.
+          inversion HP1; reflexivity.
+        }
+        subst P1.
+        eapply Hdone2; exact Hshape.
+      -- intros cont0 Hshape.
+         exfalso; eapply Hno_direct_recv; eauto.
     + destruct HrecvQ as [cont [fr_head [HrootRecv [HrecvTypesEq HrecvCovered]]]].
       destruct (typecheck_session_component_at_delta qcontext M delta G p P
         (ltt_send q fs) Htyped HP Hsend) as [qcP' HtypedP'].
@@ -2833,7 +2924,33 @@ Proof.
                   (rewrite Rmult_1_l; reflexivity).
                 eapply ms_step; [exact Hstep|].
                 apply ms_refl; apply equivalent_refl. }
-              exact Htyped2.
+              split; [exact Htyped2|].
+              split.
+              * intros r Hrp Hrq.
+                unfold Safter, Sbase.
+                rewrite insert_neq by (intro Heq; apply Hrp; symmetry; exact Heq).
+                rewrite insert_neq by (intro Heq; apply Hrq; symmetry; exact Heq).
+                rewrite insert_neq by (intro Heq; apply Hrp; symmetry; exact Heq).
+                rewrite insert_neq by (intro Heq; apply Hrq; symmetry; exact Heq).
+                reflexivity.
+              * split.
+                -- intros l0 e0 P0 Hshape.
+                subst P.
+                rewrite unravelP_send in HrootSend.
+                inversion HrootSend; subst.
+                unfold Safter.
+                rewrite insert_eq.
+                reflexivity.
+                -- intros cont0 Hshape.
+                subst Q.
+                rewrite unravelP_recv in HrootRecv.
+                inversion HrootRecv; subst cont.
+                exists l, Qbranch, (Primitives.Nat n0).
+                split; [exact HbranchProcess|].
+                unfold Safter, Qafter.
+                rewrite insert_neq by exact Hneq.
+                rewrite insert_eq.
+                reflexivity.
            ++ inversion Hsort.
            ++ inversion Hsort.
         -- destruct v as [n0|b|qv].
@@ -2876,7 +2993,33 @@ Proof.
                   (rewrite Rmult_1_l; reflexivity).
                 eapply ms_step; [exact Hstep|].
                 apply ms_refl; apply equivalent_refl. }
-              exact Htyped2.
+              split; [exact Htyped2|].
+              split.
+              * intros r Hrp Hrq.
+                unfold Safter, Sbase.
+                rewrite insert_neq by (intro Heq; apply Hrp; symmetry; exact Heq).
+                rewrite insert_neq by (intro Heq; apply Hrq; symmetry; exact Heq).
+                rewrite insert_neq by (intro Heq; apply Hrp; symmetry; exact Heq).
+                rewrite insert_neq by (intro Heq; apply Hrq; symmetry; exact Heq).
+                reflexivity.
+              * split.
+                -- intros l0 e0 P0 Hshape.
+                subst P.
+                rewrite unravelP_send in HrootSend.
+                inversion HrootSend; subst.
+                unfold Safter.
+                rewrite insert_eq.
+                reflexivity.
+                -- intros cont0 Hshape.
+                subst Q.
+                rewrite unravelP_recv in HrootRecv.
+                inversion HrootRecv; subst cont.
+                exists l, Qbranch, (Primitives.Bool b).
+                split; [exact HbranchProcess|].
+                unfold Safter, Qafter.
+                rewrite insert_neq by exact Hneq.
+                rewrite insert_eq.
+                reflexivity.
            ++ inversion Hsort.
         -- destruct v as [n0|b|qv].
            ++ inversion Hsort.
@@ -2936,7 +3079,33 @@ Proof.
                   (rewrite Rmult_1_l; reflexivity).
                 eapply ms_step; [exact Hstep|].
                 apply ms_refl; apply equivalent_refl. }
-              exact Htyped2.
+              split; [exact Htyped2|].
+              split.
+              * intros r Hrp Hrq.
+                unfold Safter, Sbase.
+                rewrite insert_neq by (intro Heq; apply Hrp; symmetry; exact Heq).
+                rewrite insert_neq by (intro Heq; apply Hrq; symmetry; exact Heq).
+                rewrite insert_neq by (intro Heq; apply Hrp; symmetry; exact Heq).
+                rewrite insert_neq by (intro Heq; apply Hrq; symmetry; exact Heq).
+                reflexivity.
+              * split.
+                -- intros l0 e0 P0 Hshape.
+                subst P.
+                rewrite unravelP_send in HrootSend.
+                inversion HrootSend; subst.
+                unfold Safter.
+                rewrite insert_eq.
+                reflexivity.
+                -- intros cont0 Hshape.
+                subst Q.
+                rewrite unravelP_recv in HrootRecv.
+                inversion HrootRecv; subst cont.
+                exists l, Qbranch, (Primitives.QVal qv).
+                split; [exact HbranchProcess|].
+                unfold Safter, Qafter.
+                rewrite insert_neq by exact Hneq.
+                rewrite insert_eq.
+                reflexivity.
       * exfalso; contradiction.
 Qed.
 
@@ -2985,10 +3154,10 @@ Proof.
     by reflexivity.
   destruct (session_fidelity_iteration_local n M delta G p q qcontext qstate
     P Q Hneq Hrank HP HQ
-    (ex_intro _ l0 (ex_intro _ B0 (ex_intro _ delta0 Hctx0))) Htyped
+    (ex_intro _ fs (ex_intro _ fr (conj Hsend Hrecv))) Htyped
     (fun pt P0 Hlookup => Hguard pt P0 Hlookup) Hstate HagreeP HagreeQ)
     as [delta2 [G2 [l2 [S2 [qstate2 [M2 [pi [la [qcontext2
-      [Hctx2 [Hgstep2 [Hmulti Htyped2]]]]]]]]]]]].
+      [Hctx2 [Hgstep2 [Hmulti [Htyped2 [Hframe [Hdone HrecvDone]]]]]]]]]]]]]]].
   exists delta2, G2, l2, S2.
   split; [exact Hctx2|]. split; [exact Hgstep2|].
   exists qstate, qstate2, pi, qcontext2, M2, la.

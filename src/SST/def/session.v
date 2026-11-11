@@ -138,12 +138,12 @@ Definition live_path gxs :=
 Definition live_ctx_0 gxs := wdef gxs -> fair_path gxs -> live_path gxs.
 
 (* context association with global types, assuming a good merge *)
-Definition assoc_gctx `{good_merge} gtx G := 
+Definition assoc_gctx `{good_merge} (gtx:typ_ctx) G := 
   (forall pt, isgPartsC pt G -> exists T, gtx pt = Some T) /\ 
   (forall pt T, gtx pt = Some T -> exists T', projC G pt T' /\ subtypeC T T').
 
 (* proj_G(\Delta) *)
-Definition full_proj_assoc `{good_merge} gtx G := 
+Definition full_proj_assoc `{good_merge} (gtx:typ_ctx) G := 
   (forall pt, isgPartsC pt G -> exists T, gtx pt = Some T) /\ 
   (forall pt T, gtx pt = Some T ->projC G pt T).
 
@@ -217,129 +217,3 @@ Proof.
           exists (pt, Psrc); split; [reflexivity|].
           apply specs; exact Hsome0.
 Qed.
-
-(* version of typing rules where there is an explicit map into the local type 
-Inductive typ_sess_with_Tx `{good_merge} : session -> gtt -> (participant -> option ltt) -> Prop :=
-  | twx_sess : 
-    forall M G Tx, balancedG G -> regGtt G ->
-    (forall pt, isgPartsC pt G -> InS pt M) ->
-    (forall pt P, M pt = Some P -> exists T T', Tx pt = Some T /\ cguardedP P /\ projC G pt T' /\ typ_proc nil nil P T /\ subtypeC T T') ->
-    (forall pt, InS pt M <-> InS pt Tx) ->
-    typ_sess_with_Tx M G Tx.
-
-
-(* typ_sess_with_Tx is typ_sess with an explicit Tx *) 
-Lemma typ_sess_with_Tx_forget `{good_merge} : forall M G gtx, 
-  typ_sess_with_Tx M G gtx -> typ_sess M G.
-Proof.
-  intros.
-  inversion H0. subst. unfold finiteF in *. unfold InS in *. rename H6 into Hk. constructor; try easy.
-  intros.
-  specialize(H4 pt P). fill_triv. destruct_exists_and. 
-  split. easy. exists x1. split. easy. apply tc_sub with x0; try easy.
-Qed.
-
-
-(* on the other hand, we can also construct an explicit Tx by feeding back the exact projections *)
-Lemma typ_sess_create `{good_merge} : forall M G,
-  typ_sess M G -> exists Tx, typ_sess_with_Tx M G Tx.
-Proof.
-  intros.
-  inversion H0; clear H0; subst.
-  assert(exists Tx, 
-          (forall pt P, M pt = Some P -> exists T T', Tx pt = Some T /\ cguardedP P /\ projC G pt T' /\ typ_proc nil nil P T /\ subtypeC T T') /\
-          (forall pt, InS pt M <-> InS pt Tx)).
-  {
-    clear H1 H2 H3. unfold finiteF in H5. destruct H5 as (Mpt,(Ha,Hb)).
-    revert Hb Ha H4. revert M.
-    induction Mpt; intros.
-    - exists (fun pt => None).
-      split; intros.
-      - specialize(Hb pt). destruct Hb. simpl in H2. assert False.
-        apply H2. exists P. easy.
-        easy.
-      - split; intros.
-        - specialize(Hb pt). destruct Hb; fill_triv. easy.
-        - destruct H0. easy.
-    - inversion Ha. subst. clear Ha.
-      specialize(IHMpt (fun pt => if eqb pt a then None else M pt)).
-      assert_concl_of IHMpt as Ha.
-      {
-        apply IHMpt; try easy; clear IHMpt.
-        - intros.
-          specialize(Hb pt). destruct Hb.
-          split.
-          - intro.
-            specialize(string_dec pt a); intros. destruct H6; subst; try easy.
-            assert(InS pt M). apply H0. right. easy.
-            destruct H6. exists x.
-            specialize(eqb_neq pt a); intros. destruct H7; fill_triv. rewrite H8.
-            easy.
-          - intro.
-            destruct H5. case_eq (eqb pt a); intros.
-            - rewrite H6 in H5. easy.
-            - rewrite H6 in H5.
-              assert(In pt (a :: Mpt)). apply H1. exists x. easy.
-              specialize(eqb_neq pt a); intros. destruct H8; fill_triv.
-              destruct H7; subst; try easy.
-        - intros.
-          case_eq (eqb pt a); intros.
-          - rewrite H1 in H0. easy.
-          - rewrite H1 in H0. specialize(H4 pt P). apply H4; try easy.
-      }
-      clear IHMpt. destruct Ha as (Tx,(Ha,Hc)).
-      specialize(Hb a). assert(InS a M). apply Hb. left. easy.
-      destruct H0 as (P,H0). specialize(H4 a P). fill_triv. destruct_exists_and.
-      exists (fun pt => if eqb pt a then Some x else Tx pt). clear Hb.
-      split.
-      - intros.
-        specialize(Ha pt P0). specialize(Hc pt).
-        case_eq (eqb pt a); intros Hd; rewrite Hd in Ha Hc.
-        - eexists. exists x. split. easy.
-          specialize(eqb_eq pt a); intros. rewrite H7 in Hd. subst.
-          rewrite H6 in H0. invert_all_some. split. easy. split. easy.
-          split. easy. apply stRefl.
-        - fill_triv. destruct_exists_and. exists x0. exists x1. easy.
-      - intros.
-        unfold InS in *.
-        case_eq (eqb pt a); intros.
-        - specialize(eqb_eq pt a); intros. rewrite H7 in H6. subst. rewrite H0.
-          split; try eexists; try easy.
-        - split; intros; fill_triv.
-          - destruct H7. specialize(Ha pt x0). rewrite H6 in Ha. fill_triv. 
-            destruct_exists_and. exists x1. easy.
-          - specialize(Hc pt). destruct Hc; fill_triv. rewrite H6 in H9. easy.
-  }
-  destruct H0 as (Tx,(Ha, Hb)). exists Tx. constructor; try easy.
-Qed.
-  
-
-(* typ_sess_with_Tx gives association (assuming Tx has the correct form) *)
-Lemma typ_sess_is_assoc `{good_merge} : forall M G Tx,
-  typ_sess_with_Tx M G Tx ->  
-  assoc_gctx Tx G.  
-Proof.
-  intros. 
-  inversion H0. subst. constructor; try easy.
-  - intros.
-    specialize(H6 pt). apply H6. apply H3. easy.
-  - intros.
-    specialize(H6 pt).
-    assert(exists P, M pt = Some P). apply H6. exists T. easy.
-    destruct H8 as (P,Ha).
-    specialize(H4 pt P). fill_triv. destruct_exists_and. rewrite H7 in H4.
-    invert_all_some. 
-    exists x0. easy.
-Qed.
-*)
-
-
-
-
-
-
-
-
-
-
-  
