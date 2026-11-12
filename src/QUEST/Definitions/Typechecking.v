@@ -11,36 +11,36 @@ Definition qubit_context := finite_map qubit_reference unit.
 
 Definition process_context := list (option (ltt * qubit_context)).
 
-Definition typing_context := (process_context * variable_context * qubit_context)%type.
+Definition typechecking_context := (process_context * variable_context * qubit_context)%type.
 
-Definition empty_context : typing_context := (nil, nil, empty_fmap).
+Definition empty_context : typechecking_context := (nil, nil, empty_fmap).
 
-Definition in_process_context (context: typing_context) (X: nat) T : Prop := nth X context.1.1 None = Some T.
+Definition in_process_context (context: typechecking_context) (X: nat) T : Prop := nth X context.1.1 None = Some T.
 
-Definition insert_into_process_context (context: typing_context) (TD:ltt * qubit_context):typing_context := (Some TD::context.1.1, context.1.2, context.2).
+Definition insert_into_process_context (context: typechecking_context) (TD:ltt * qubit_context):typechecking_context := (Some TD::context.1.1, context.1.2, context.2).
 
-Definition in_variable_context (context: typing_context) (x: variable) (s: sort) : Prop := nth x context.1.2 None = Some s.
+Definition in_variable_context (context: typechecking_context) (x: variable) (s: sort) : Prop := nth x context.1.2 None = Some s.
 
-Definition insert_into_variable_context (context: typing_context) (s: sort) : typing_context := (context.1.1, Some s :: context.1.2, context.2).
+Definition insert_into_variable_context (context: typechecking_context) (s: sort) : typechecking_context := (context.1.1, Some s :: context.1.2, context.2).
 
-Definition remove_from_variable_context (context: typing_context) (n: fin) : typing_context := (context.1.1, updn context.1.2 n None, context.2).
+Definition remove_from_variable_context (context: typechecking_context) (n: fin) : typechecking_context := (context.1.1, updn context.1.2 n None, context.2).
 
-Definition in_qubit_context (context: typing_context) (y: qubit_reference) : Prop := context.2 y = Some tt.
+Definition in_qubit_context (context: typechecking_context) (y: qubit_reference) : Prop := context.2 y = Some tt.
 
-Definition insert_into_qubit_context (context: typing_context) (y: qubit_reference): typing_context := (context.1, insert (KEQ:= qr_dec) context.2 y tt).
+Definition insert_into_qubit_context (context: typechecking_context) (y: qubit_reference): typechecking_context := (context.1, insert (KEQ:= qr_dec) context.2 y tt).
 
-Definition remove_from_qubit_context (context: typing_context) (y: qubit_reference): typing_context := 
+Definition remove_from_qubit_context (context: typechecking_context) (y: qubit_reference): typechecking_context := 
 (context.1, delete (KEQ:= qr_dec) context.2 y).
 
 Definition remove_measured_expression_from_context
-    (context : typing_context) (e : expression) : typing_context :=
+    (context : typechecking_context) (e : expression) : typechecking_context :=
   match e with
   | Val (QVal q) => remove_from_qubit_context context q
   | Var x => remove_from_variable_context context x
   | _ => context
   end.
 
-Inductive typecheck_expression : typing_context -> expression -> sort -> Prop :=
+Inductive typecheck_expression : typechecking_context -> expression -> sort -> Prop :=
 | TE_ValN: forall context n, 
 typecheck_expression context (Val (Primitives.Nat n)) header.Nat
 
@@ -91,10 +91,10 @@ typecheck_expression context a header.Bool ->
 typecheck_expression context (Op Not (a::nil)) header.Bool.
 
 
-Definition only_qubit_references_in_context (context: typing_context) :=
+Definition only_qubit_references_in_context (context: typechecking_context) :=
 Forall (fun s => s <> Some Qubit) context.1.2.
 
-Inductive typecheck_process : typing_context -> process -> ltt -> Prop :=
+Inductive typecheck_process : typechecking_context -> process -> ltt -> Prop :=
 |T_qbit : forall context P T, 
 typecheck_process (insert_into_variable_context context Qubit) P T -> 
 typecheck_process context (p_newq P) T
@@ -162,11 +162,11 @@ typecheck_process context P T'.
 
 
 Program Definition typecheck_process_deep_ind := 
-fun (P : typing_context -> process -> ltt -> Prop)
-(f : forall (context : typing_context) (P0 : process) (T : ltt),
+fun (P : typechecking_context -> process -> ltt -> Prop)
+(f : forall (context : typechecking_context) (P0 : process) (T : ltt),
 typecheck_process (insert_into_variable_context context Qubit) P0 T ->
 P (insert_into_variable_context context Qubit) P0 T -> P context (p_newq P0) T)
-(f0 : forall (context : typing_context) (z : expression) (P0 : process) (T : ltt),
+(f0 : forall (context : typechecking_context) (z : expression) (P0 : process) (T : ltt),
 typecheck_expression context z Qubit ->
 typecheck_process
   (insert_into_variable_context
@@ -174,15 +174,15 @@ typecheck_process
 P (insert_into_variable_context
   (remove_measured_expression_from_context context z) header.Bool) P0 T ->
 P context (p_measure z P0) T)
-(f1 : forall (context : typing_context) (n : fin) (U : SQIR.base_Unitary n) (lz : list expression) (P0 : process)
+(f1 : forall (context : typechecking_context) (n : fin) (U : SQIR.base_Unitary n) (lz : list expression) (P0 : process)
 (T : ltt),
 Datatypes.length lz = n ->
 Forall (fun z : expression => typecheck_expression context z Qubit) lz ->
 NoDup lz -> typecheck_process context P0 T -> P context P0 T -> P context (p_unitary n U lz P0) T)
-(f2 : forall (context : typing_context) (lz : list expression),
+(f2 : forall (context : typechecking_context) (lz : list expression),
 (forall z : expression, In z lz <-> typecheck_expression context z Qubit) -> NoDup lz ->
 P context (p_end lz) ltt_end)
-(f3 : forall (context : typing_context) (p : participant) (e : expression) (P0 : process) (l : fin) (B : sort)
+(f3 : forall (context : typechecking_context) (p : participant) (e : expression) (P0 : process) (l : fin) (B : sort)
 (T : ltt),
 typecheck_expression context e B ->
 typecheck_process
@@ -205,28 +205,28 @@ match e with
 end
 | _ => context
 end P0 T -> P context (p_send p l e P0) (ltt_send p (fun n : fin => if Nat.eqb n l then Some (B, T) else None)))
-(f4 : forall (context : typing_context) (p : participant) (lP : slist process) (lBT : slist (sort * ltt)),
+(f4 : forall (context : typechecking_context) (p : participant) (lP : slist process) (lBT : slist (sort * ltt)),
 SForall2 (fun (P0 : process) (BT : sort * ltt) =>
 typecheck_process (insert_into_variable_context context BT.1) P0 BT.2) lP lBT ->
 SForall2 (fun (P0 : process) (BT : sort * ltt) =>
 P (insert_into_variable_context context BT.1) P0 BT.2) lP lBT ->
 P context (p_recv p lP) (ltt_recv p (fun n : fin => onth n lBT)))
-(f5 : forall (context : typing_context) (e : expression) (P1 P0 : process) (T : ltt),
+(f5 : forall (context : typechecking_context) (e : expression) (P1 P0 : process) (T : ltt),
 typecheck_expression context e header.Bool ->
 typecheck_process context P1 T ->
 P context P1 T -> typecheck_process context P0 T -> P context P0 T -> P context (p_ite e P1 P0) T)
-(f6 : forall (context : typing_context) (P0 : process) (T : ltt),
+(f6 : forall (context : typechecking_context) (P0 : process) (T : ltt),
 typecheck_process (insert_into_process_context context (T, context.2)) P0 T ->
 P (insert_into_process_context context (T, context.2)) P0 T ->
 only_qubit_references_in_context context -> P context (p_rec P0) T)
-(f7 : forall (context : typing_context) (qcontext : qubit_context) (X : fin) lz (T : ltt),
+(f7 : forall (context : typechecking_context) (qcontext : qubit_context) (X : fin) lz (T : ltt),
 in_process_context context X (T, qcontext) ->
 only_qubit_references_in_context context -> equivalent qcontext context.2 ->
 (forall z, In z lz <-> typecheck_expression context z Qubit) ->
 NoDup lz -> P context (p_var X lz) T)
-(f8 : forall (context : typing_context) (P0 : process) (T T' : ltt),
+(f8 : forall (context : typechecking_context) (P0 : process) (T T' : ltt),
 typecheck_process context P0 T -> P context P0 T -> subtypeC T T' -> P context P0 T') =>
-fix F (t : typing_context) (p : process) (l : ltt) (t0 : typecheck_process t p l) {struct t0} : P t p l :=
+fix F (t : typechecking_context) (p : process) (l : ltt) (t0 : typecheck_process t p l) {struct t0} : P t p l :=
 match t0 in (typecheck_process t1 p0 l0) return (P t1 p0 l0) with
 | T_qbit context P0 T t1 => f context P0 T t1 (F (insert_into_variable_context context Qubit) P0 T t1)
 | T_meas context z P0 T t1 t2 =>

@@ -19,7 +19,7 @@ From Paco Require Import paco.
   Definition qubit_context_keys (qc : qubit_context) :=
     map fst (elems qubit_reference unit qc).
 
-  Definition owned_qubits_of_components (delta : typ_ctx)
+  Definition owned_qubits_of_components (delta : typing_context)
       (lqc : list qubit_context) : list (participant * qubit_reference) :=
     flat_map
       (fun item =>

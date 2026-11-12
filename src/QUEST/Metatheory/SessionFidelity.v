@@ -742,7 +742,7 @@ Inductive process_head_uses_qubit : process_head_view -> qubit_reference -> Prop
 Lemma process_head_qubit_has_typed_context : forall P h T q,
   process_head_type P h T ->
   process_head_uses_qubit h q ->
-  exists context : typing_context, context.2 q = Some tt.
+  exists context : typechecking_context, context.2 q = Some tt.
 Proof.
   intros P h T q Hhead.
   induction Hhead; intros Huses; try solve [inversion Huses].
@@ -2472,7 +2472,7 @@ Lemma guarded_typed_send_head_classification : forall context P q f,
     process_head_view_closed h /\
     process_root_view (unravelP P) = Some h /\
     (is_internal_head_view h \/
-      exists l e (P' : process) (expr_context : typing_context) (B : sort)
+      exists l e (P' : process) (expr_context : typechecking_context) (B : sort)
         (T0 : ltt),
         unravelP P = p_send q l e P' /\
         typecheck_expression expr_context e B /\
@@ -2626,7 +2626,7 @@ Proof.
 Qed.
 
 Lemma session_fidelity_iteration_local `{good_merge} : forall
-    (n : nat) (M : session) (delta : typ_ctx) (G : gtt)
+    (n : nat) (M : session) (delta : typing_context) (G : gtt)
     (p q : participant) (qcontext : qubit_context)
     (qstate : quantum_state) (P Q : process),
   p <> q ->

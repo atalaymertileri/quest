@@ -973,7 +973,7 @@ Proof.
 Qed.
 
 Lemma typecheck_session_component_of_map `{good_merge}:
-forall (qcontext: qubit_context) (M: session) (delta: typ_ctx)
+forall (qcontext: qubit_context) (M: session) (delta: typing_context)
   (lqc: list qubit_context),
 Permutation (map fst (elems participant ltt delta)) (session_participants M) ->
 Datatypes.length lqc = Datatypes.length (elems participant ltt delta) ->
@@ -1031,7 +1031,7 @@ Proof.
   - exact Hqc.
 Qed.
 
-Lemma assoc_projection_complete `{good_merge} : forall (G:gtt) (Gl:typ_ctx),
+Lemma assoc_projection_complete `{good_merge} : forall (G:gtt) (Gl:typing_context),
   regGtt G -> balancedG G -> assoc_gctx Gl G -> projectableA G.
 Proof.
   intros G Gl Hreg Hbal Hassoc.
@@ -1049,7 +1049,7 @@ Proof.
       pfold; constructor; exact Hnotpart.
 Qed.
 
-Lemma assoc_on_for_ctx_step `{good_merge} : forall (G:gtt) (Gl Gl':typ_ctx)
+Lemma assoc_on_for_ctx_step `{good_merge} : forall (G:gtt) (Gl Gl':typing_context)
   (p q:participant) (l:label) (B:sort),
   regGtt G -> balancedG G -> assoc_gctx Gl G ->
   ctx_step_f Gl p q l B Gl' ->

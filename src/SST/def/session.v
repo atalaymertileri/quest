@@ -27,31 +27,31 @@ Definition stuck (M : session) := (is_inact M -> False) /\ ((exists qs a S' r, s
 Definition stuckM (M : session) := exists qs la S' r, multistep (qs, M) la S' r /\ stuck (snd S').
   
 (* typing contexts are partial functions from participants to local type trees *)
-Definition typ_ctx := finite_map participant ltt.
+Definition typing_context := finite_map participant ltt.
 
 (* corresponds to \Delta -(p : q \oplus l(s)t)-> *)
-Inductive ctx_step_s : typ_ctx -> participant -> participant -> Prop :=
-  | step_s : forall (G: typ_ctx) p q xs l st, 
+Inductive ctx_step_s : typing_context -> participant -> participant -> Prop :=
+  | step_s : forall (G: typing_context) p q xs l st, 
              G p = Some (ltt_send q xs) -> 
              xs l = Some st -> 
              ctx_step_s G p q.
 (* explict label *)
-Inductive ctx_step_sl : typ_ctx -> participant -> participant -> label -> sort -> Prop :=
-  | step_sl : forall (G: typ_ctx) p q xs l B T, 
+Inductive ctx_step_sl : typing_context -> participant -> participant -> label -> sort -> Prop :=
+  | step_sl : forall (G: typing_context) p q xs l B T, 
              G p = Some (ltt_send q xs) -> 
              xs l = Some (B, T) -> 
              ctx_step_sl G p q l B.
              
 (* corresponds to \Delta -(p : q & l(s)t)-> *) 
-Inductive ctx_step_r : typ_ctx -> participant -> participant -> Prop :=
-  | step_r : forall (G: typ_ctx) p q xs l st, 
+Inductive ctx_step_r : typing_context -> participant -> participant -> Prop :=
+  | step_r : forall (G: typing_context) p q xs l st, 
              G p = Some (ltt_recv q xs) -> 
              xs l = Some st -> 
              ctx_step_r G p q.
 
 (* corresponds to \Delta -(pq)l-> \Delta' *)
-Inductive ctx_step_f : typ_ctx -> participant -> participant -> label -> sort -> typ_ctx -> Prop :=
-  | step_sr : forall (G G': typ_ctx) p q l xs ys T T' B, 
+Inductive ctx_step_f : typing_context -> participant -> participant -> label -> sort -> typing_context -> Prop :=
+  | step_sr : forall (G G': typing_context) p q l xs ys T T' B, 
               p <> q -> 
               G p = Some (ltt_send q xs) -> 
               G q = Some (ltt_recv p ys) -> 
@@ -61,42 +61,42 @@ Inductive ctx_step_f : typ_ctx -> participant -> participant -> label -> sort ->
               ctx_step_f G p q l B G'.
 
 (* syntactic sugar where we don't care about the specific participants involved *)
-Inductive typ_ctx_red : typ_ctx -> typ_ctx -> Prop := 
-  | step_on_f : forall G G' p q l B, ctx_step_f G p q l B G' -> typ_ctx_red G G'.
+Inductive typing_context_red : typing_context -> typing_context -> Prop := 
+  | step_on_f : forall G G' p q l B, ctx_step_f G p q l B G' -> typing_context_red G G'.
 
 
 (* safe typing context *)
-Definition safe_ctx (gtx : typ_ctx) := forall gtx',
-  multi typ_ctx_red gtx gtx' ->
+Definition safe_ctx (gtx : typing_context) := forall gtx',
+  multi typing_context_red gtx gtx' ->
   (forall p q l B,
         ctx_step_sl gtx' p q l B -> 
         ctx_step_r gtx' q p ->
         exists gtx'', ctx_step_f gtx' p q l B gtx'').
    
 (* completed typing context *)
-Definition is_end (gtx : typ_ctx) := forall pt, gtx pt = None \/ gtx pt = Some ltt_end.
+Definition is_end (gtx : typing_context) := forall pt, gtx pt = None \/ gtx pt = Some ltt_end.
 
 (* deadlock free typing context *)
-Definition df_ctx (gtx : typ_ctx) := forall gtx', 
-      multi typ_ctx_red gtx gtx' ->
-      (forall gtx'', typ_ctx_red gtx' gtx'' -> False) -> 
+Definition df_ctx (gtx : typing_context) := forall gtx', 
+      multi typing_context_red gtx gtx' ->
+      (forall gtx'', typing_context_red gtx' gtx'' -> False) -> 
       is_end gtx'.
 
 (* live *)
-Definition live_ctx (gtx : typ_ctx) := forall gtx',
-      multi typ_ctx_red gtx gtx' ->  
+Definition live_ctx (gtx : typing_context) := forall gtx',
+      multi typing_context_red gtx gtx' ->  
       (forall p q l B, ctx_step_sl gtx' p q l B -> 
-       exists gtx1 gtx2, multi typ_ctx_red gtx' gtx1 /\
+       exists gtx1 gtx2, multi typing_context_red gtx' gtx1 /\
                      ctx_step_f gtx1 p q l B gtx2) /\
       (forall p q,   ctx_step_r  gtx' q p   ->
-       exists gtx1 gtx2 l B, multi typ_ctx_red gtx' gtx1 /\
+       exists gtx1 gtx2 l B, multi typing_context_red gtx' gtx1 /\
                      ctx_step_f gtx1 p q l B gtx2).
   
 
 
 
 (* a context path is a possibly infinite sequence of typing contexts *)
-Notation ctx_path := (stream typ_ctx).
+Notation ctx_path := (stream typing_context).
 
 (* context paths are well defined if every step corresponds to an actual reduction step *)
 Definition wdef gxs := (forall n G1 G2, 
@@ -138,12 +138,12 @@ Definition live_path gxs :=
 Definition live_ctx_0 gxs := wdef gxs -> fair_path gxs -> live_path gxs.
 
 (* context association with global types, assuming a good merge *)
-Definition assoc_gctx `{good_merge} (gtx:typ_ctx) G := 
+Definition assoc_gctx `{good_merge} (gtx:typing_context) G := 
   (forall pt, isgPartsC pt G -> exists T, gtx pt = Some T) /\ 
   (forall pt T, gtx pt = Some T -> exists T', projC G pt T' /\ subtypeC T T').
 
 (* proj_G(\Delta) *)
-Definition full_proj_assoc `{good_merge} (gtx:typ_ctx) G := 
+Definition full_proj_assoc `{good_merge} (gtx:typing_context) G := 
   (forall pt, isgPartsC pt G -> exists T, gtx pt = Some T) /\ 
   (forall pt T, gtx pt = Some T ->projC G pt T).
 
@@ -169,7 +169,7 @@ Definition is_assoc gtx `{good_merge} := exists G, assoc_gctx gtx G /\ regGtt G 
 (* ------------------------------------------------------------------------- *)
 
 
-Definition typecheck_session `{good_merge} (qcontext: qubit_context) (s: session) (delta: typ_ctx) (Gtt: gtt):=
+Definition typecheck_session `{good_merge} (qcontext: qubit_context) (s: session) (delta: typing_context) (Gtt: gtt):=
 exists lqc,
 regGtt Gtt /\
 balancedG Gtt /\

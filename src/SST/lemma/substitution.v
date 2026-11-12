@@ -2279,7 +2279,7 @@ Proof.
     - apply IH.
 Qed.
 
-Lemma recursion_typing_context_lift :
+Lemma recursion_typechecking_context_lift :
     forall P T qc pc vc,
     typecheck_process (pc, vc, qc) (p_rec P) T ->
     Forall (fun s : option sort => s <> Some Qubit) vc ->
@@ -2645,7 +2645,7 @@ Proof.
       typecheck_process (Gpre ++ pc, cpre ++ vc, qc)
         (incr_free 0 0 (length Gpre) (length cpre) (p_rec P)) T).
     { intros Gpre cpre Hcpre.
-      eapply recursion_typing_context_lift; eauto. }
+      eapply recursion_typechecking_context_lift; eauto. }
     eapply (@typecheck_rec_substitution_induction P T qc pc vc Honly Hlift
         (Some (T, qc) :: pc, vc, qc) P T Hbody nil nil qc eq_refl).
     unfold included; simpl; auto.

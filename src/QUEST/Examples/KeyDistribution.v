@@ -864,7 +864,7 @@ Proof.
 Qed.
 
 Lemma send0_extend_typecheck :
-  forall (context : typing_context) (p : participant) (e : expression)
+  forall (context : typechecking_context) (p : participant) (e : expression)
          (P : process) (B : sort) (T : ltt),
     typecheck_expression context e B ->
     typecheck_process
@@ -1206,11 +1206,11 @@ Proof.
   exact P_V_initial_measurements_typecheck.
 Qed.
 
-Definition after_qow_send (context : typing_context) : typing_context :=
+Definition after_qow_send (context : typechecking_context) : typechecking_context :=
   remove_from_variable_context (insert_into_variable_context context Qubit) 0.
 
 Lemma qow_send_typecheck :
-  forall (k : list bool) (context : typing_context) (p : participant)
+  forall (k : list bool) (context : typechecking_context) (p : participant)
          (T : ltt) (cont : process),
     typecheck_process (after_qow_send context) cont T ->
     typecheck_process context

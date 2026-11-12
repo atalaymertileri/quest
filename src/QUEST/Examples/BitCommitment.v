@@ -182,7 +182,7 @@ Definition L_E : ltt :=
   Bob .&. { 0 (. header.Bool .); ltt_end
            | 1 (. header.Bool .); ltt_end }.
 
-Definition bit_commitment_delta (xs : list bool) : typ_ctx :=
+Definition bit_commitment_delta (xs : list bool) : typing_context :=
   insert (insert (insert (insert empty_fmap
     Alice (L_A (List.length xs) (List.length xs)))
     Bob (L_B (List.length xs) (List.length xs)))

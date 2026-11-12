@@ -97,7 +97,7 @@ Proof.
       pfold. constructor. easy.
 Qed.
 
-Lemma assoc_on `{good_merge} : forall G (Gl: typ_ctx) Gl' p q l s, regGtt G -> balancedG G -> assoc_gctx Gl G -> ctx_step_f Gl p q l s Gl' -> exists G', assoc_gctx Gl' G' /\ gttstepC G G' p q l /\ balancedG G'.
+Lemma assoc_on `{good_merge} : forall G (Gl: typing_context) Gl' p q l s, regGtt G -> balancedG G -> assoc_gctx Gl G -> ctx_step_f Gl p q l s Gl' -> exists G', assoc_gctx Gl' G' /\ gttstepC G G' p q l /\ balancedG G'.
 Proof.
   intros.
   specialize(assoc_projA G Gl H0 H1 H2). intro Ht.
@@ -273,7 +273,7 @@ Qed.
 
 Lemma is_assoc_forward `{good_merge} : forall gtx gtx', 
       is_assoc gtx ->  
-      multi typ_ctx_red gtx gtx' -> 
+      multi typing_context_red gtx gtx' -> 
       is_assoc gtx'.
 Proof.
   intros. revert H0.
@@ -434,7 +434,7 @@ Qed.
 
 
 
-Lemma P_after_step : forall gtx gtx', multi typ_ctx_red gtx gtx' -> (forall pt T, gtx pt = Some T -> regLtt T) -> (forall pt T, gtx' pt = Some T -> regLtt T).
+Lemma P_after_step : forall gtx gtx', multi typing_context_red gtx gtx' -> (forall pt T, gtx pt = Some T -> regLtt T) -> (forall pt T, gtx' pt = Some T -> regLtt T).
 Proof.
   intros gtx gtx' Hmulti.
   induction Hmulti as [G | G Gmid G' Hred Htail IH]; intros Hreg pt T Hlookup.
@@ -537,7 +537,7 @@ Section ctx_sf_df.
 
 (* Safety and deadlock-freedom transfer from global assumptions to contexts. *)
 
-  Variable gtx : typ_ctx.
+  Variable gtx : typing_context.
   Hypothesis P : forall pt T, gtx pt = Some T -> regLtt T.
   
   
@@ -967,7 +967,7 @@ Proof.
   exists l, B, Gl'. exact Hf.
 Qed.
 
-Lemma assoc_wdef_to_step_s `{good_merge} : forall p q xs (Gl : typ_ctx),
+Lemma assoc_wdef_to_step_s `{good_merge} : forall p q xs (Gl : typing_context),
     (forall pt T, Gl pt = Some T -> regLtt T) ->
     assoc_gctx Gl (gtt_send p q xs) -> 
     ctx_step_s Gl p q.
@@ -1105,10 +1105,10 @@ Lemma assoc_fair_live_n0_s `{good_merge} : forall m gxs Gl p q s s0 o k G1 G2 l 
           stnth m gxs = Some G1 ->
           stnth m.+1 gxs = Some G2 ->
           ctx_step_f G1 s s0 l B G2 ->
-          (exists (k0 l0 : fin) (B0 : sort) (G0 G3 : typ_ctx),
+          (exists (k0 l0 : fin) (B0 : sort) (G0 G3 : typing_context),
              0 <= k0 /\
              stnth k0 gxs = Some G0 /\ stnth k0.+1 gxs = Some G3 /\ ctx_step_f G0 p q l0 B0 G3) \/
-          (exists (k0 : fin) (G0 : typ_ctx) (G' : gtt),
+          (exists (k0 : fin) (G0 : typing_context) (G' : gtt),
              0 <= k0 /\
              stnth k0 gxs = Some G0 /\
              assoc_gctx G0 G' /\
@@ -1170,11 +1170,11 @@ Proof.
           apply H13; try easy.
       - subst.
         specialize(IHm gxs Gl' p q s s0 f' k G1 G2 l B).
-        assert((exists (k0 l0 : fin) (B0 : sort) (G0 G3 : typ_ctx),
+        assert((exists (k0 l0 : fin) (B0 : sort) (G0 G3 : typing_context),
            0 <= k0 /\
            stnth k0 gxs = Some G0 /\
            stnth k0.+1 gxs = Some G3 /\ ctx_step_f G0 p q l0 B0 G3) \/
-        (exists (k0 : fin) (G0 : typ_ctx) (G' : gtt),
+        (exists (k0 : fin) (G0 : typing_context) (G' : gtt),
            0 <= k0 /\
            stnth k0 gxs = Some G0 /\
            assoc_gctx G0 G' /\
@@ -1217,10 +1217,10 @@ Lemma assoc_fair_live_n0_r `{good_merge} : forall m gxs Gl p q s s0 o k G1 G2 l 
           stnth m gxs = Some G1 ->
           stnth m.+1 gxs = Some G2 ->
           ctx_step_f G1 s s0 l B G2 ->
-          (exists (k0 l0 : fin) (B0 : sort) (G0 G3 : typ_ctx),
+          (exists (k0 l0 : fin) (B0 : sort) (G0 G3 : typing_context),
              0 <= k0 /\
              stnth k0 gxs = Some G0 /\ stnth k0.+1 gxs = Some G3 /\ ctx_step_f G0 p q l0 B0 G3) \/
-          (exists (k0 : fin) (G0 : typ_ctx) (G' : gtt),
+          (exists (k0 : fin) (G0 : typing_context) (G' : gtt),
              0 <= k0 /\
              stnth k0 gxs = Some G0 /\
              assoc_gctx G0 G' /\
@@ -1290,11 +1290,11 @@ Proof.
         split; [exact Hbw'|exact Hrecv'].
       - subst.
         specialize(IHm gxs Gl' p q s s0 f' k G1 G2 l B).
-        assert (Hrecursive : (exists (k0 l0 : fin) (B0 : sort) (G0 G3 : typ_ctx),
+        assert (Hrecursive : (exists (k0 l0 : fin) (B0 : sort) (G0 G3 : typing_context),
            0 <= k0 /\
            stnth k0 gxs = Some G0 /\
            stnth k0.+1 gxs = Some G3 /\ ctx_step_f G0 p q l0 B0 G3) \/
-        (exists (k0 : fin) (G0 : typ_ctx) (G' : gtt),
+        (exists (k0 : fin) (G0 : typing_context) (G' : gtt),
            0 <= k0 /\
            stnth k0 gxs = Some G0 /\
            assoc_gctx G0 G' /\
@@ -1381,7 +1381,7 @@ Proof.
       repeat split; try assumption.
       apply sub_mon.
     -
-      assert((exists (k0 l : fin) (G1 G2 : typ_ctx) (B0 : sort),
+      assert((exists (k0 l : fin) (G1 G2 : typing_context) (B0 : sort),
         n <= k0 /\
         stnth k0 gxs = Some G1 /\ stnth k0.+1 gxs = Some G2 /\ ctx_step_f G1 p q l B0 G2) \/ 
         (exists k0 G1 G', n <= k0 /\ stnth k0 gxs = Some G1 /\ assoc_gctx G1 G' /\ balancedG G' /\ regGtt G' /\ balanced_with k p G' /\ ctx_step_s G1 p q)).
@@ -1422,11 +1422,11 @@ Proof.
               split; [exact Hbw|exact Hstep].
           - destruct m; try easy. destruct gxs; try easy.
             specialize(IHn G1 G2 l B0 o Gl k m p q gxs p0 p1).
-            assert((exists (k0 l : fin) (G1 G2 : typ_ctx) (B1 : sort),
+            assert((exists (k0 l : fin) (G1 G2 : typing_context) (B1 : sort),
                n <= k0 /\
                stnth k0 gxs = Some G1 /\
                stnth k0.+1 gxs = Some G2 /\ ctx_step_f G1 p q l B1 G2) \/
-            (exists (k0 : fin) (G1 : typ_ctx) (G' : gtt),
+            (exists (k0 : fin) (G1 : typing_context) (G' : gtt),
                n <= k0 /\
                stnth k0 gxs = Some G1 /\
                assoc_gctx G1 G' /\
@@ -1448,7 +1448,7 @@ Proof.
       destruct H0; try easy.
       destruct H0 as (k0,(G1,(G',(He,(Hf,(Hg,(Hh,(Hi,(Hj,Hk))))))))).
       specialize(IHk k0 G1 G').
-      assert(exists (k l : fin) (G1 G2 : typ_ctx) (B0 : sort),
+      assert(exists (k l : fin) (G1 G2 : typing_context) (B0 : sort),
         k0 <= k /\
         stnth k gxs = Some G1 /\ stnth k.+1 gxs = Some G2 /\ ctx_step_f G1 p q l B0 G2).
       {
@@ -1505,7 +1505,7 @@ Proof.
       exists k0. exists l0. exists G1. exists G2. exists B0.
       repeat split; try assumption.
       apply sub_mon.
-    - assert((exists (k0 l : fin) (G1 G2 : typ_ctx) (B0 : sort),
+    - assert((exists (k0 l : fin) (G1 G2 : typing_context) (B0 : sort),
         n <= k0 /\
         stnth k0 gxs = Some G1 /\ stnth k0.+1 gxs = Some G2 /\ ctx_step_f G1 p q l B0 G2) \/ 
         (exists k0 G1 G', n <= k0 /\ stnth k0 gxs = Some G1 /\ assoc_gctx G1 G' /\ balancedG G' /\ regGtt G' /\ balanced_with k q G' /\ ctx_step_r G1 q p)).
@@ -1547,11 +1547,11 @@ Proof.
               split; [exact Hbw|exact Hstep].
           - destruct m; try easy. destruct gxs; try easy.
             specialize(IHn G1 G2 l B0 o Gl k m p q gxs p0 p1).
-            assert((exists (k0 l : fin) (G1 G2 : typ_ctx) (B1 : sort),
+            assert((exists (k0 l : fin) (G1 G2 : typing_context) (B1 : sort),
                n <= k0 /\
                stnth k0 gxs = Some G1 /\
                stnth k0.+1 gxs = Some G2 /\ ctx_step_f G1 p q l B1 G2) \/
-            (exists (k0 : fin) (G1 : typ_ctx) (G' : gtt),
+            (exists (k0 : fin) (G1 : typing_context) (G' : gtt),
                n <= k0 /\
                stnth k0 gxs = Some G1 /\
                assoc_gctx G1 G' /\
@@ -1573,7 +1573,7 @@ Proof.
       destruct H0; try easy.
       destruct H0 as (k0,(G1,(G',(He,(Hf,(Hg,(Hh,(Hi,(Hj,Hk))))))))).
       specialize(IHk k0 G1 G').
-      assert(exists (k l : fin) (G1 G2 : typ_ctx) (B0 : sort),
+      assert(exists (k l : fin) (G1 G2 : typing_context) (B0 : sort),
         k0 <= k /\
         stnth k gxs = Some G1 /\ stnth k.+1 gxs = Some G2 /\ ctx_step_f G1 p q l B0 G2).
       {
@@ -1596,7 +1596,7 @@ Qed.
 
 Theorem ctx_liveness `{good_merge} : forall gtx gtx' gxs, 
   is_assoc gtx -> 
-  multi typ_ctx_red gtx gtx' ->
+  multi typing_context_red gtx gtx' ->
   stnth 0 gxs = Some gtx' -> 
   live_ctx_0 gxs.
 Proof.
